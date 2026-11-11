@@ -288,8 +288,9 @@
   }
   details.item > summary::-webkit-details-marker { display: none; }
   details.item > summary:hover { background: var(--surface); }
-  details.item > summary .chev { color: var(--muted); transition: transform .15s; font-size: 14px; }
+  details.item > summary .chev { color: var(--muted); transition: transform .3s ease; font-size: 14px; }
   details.item[open] > summary .chev { transform: rotate(90deg); }
+  details.item.is-closing > summary .chev { transform: none; }   /* 접히는 동안 화살표도 함께 돌아감 */
   .it-name { font-weight: 600; }
   .it-sub { display: block; font-size: 12.5px; color: var(--ink-2); font-weight: 400; margin-top: 1px; }
   .it-date { font-family: var(--mono); font-size: 12px; color: var(--muted); white-space: nowrap; text-align: right; }
@@ -569,12 +570,15 @@ const PORTFOLIO = {
 
   /* 프로젝트 메뉴 — 수업·실습 등에서 수행한 프로젝트. 날짜는 YYYY-MM 또는 YYYY-MM-DD.
      수업은 course·term, 그 밖에는 org를 넣습니다. activities는 펼쳤을 때 '주요 활동' 목록으로,
-     phases를 넣으면 기간이 단계별로 나뉘어 표시됩니다 */
+     phases를 넣으면 기간이 단계별로 나뉘어 표시됩니다.
+     실무실습 안의 활동은 program(실무실습 이름)을 넣어 각각 항목으로 둡니다 — 요약 카드는 program별로 묶어 계산 */
   classProjects: [
-    { title: "대구대학교 창파도서관 실무실습", org: "대구대학교 창파도서관", start: "2025-05-12", end: "2025-05-30",
-      activities: ["자료 인수 및 장비 작업", "대출반납대에서 이용자 응대", "창의융합프라자에서 이용자 응대", "북큐레이션 기획"] },
-    { title: "국립중앙도서관 실무실습", org: "국립중앙도서관", start: "2025-07-21", end: "2025-08-08",
-      activities: ["국립중앙도서관과 국립어린이청소년도서관 견학", "도서관 발전을 위한 도서관 랜드마크화 방안 조사 및 발표"] },
+    { title: "자료 인수 및 장비 작업", program: "대구대학교 창파도서관 실무실습", org: "대구대학교 창파도서관", start: "2025-05-12", end: "2025-05-30" },
+    { title: "대출반납대에서 이용자 응대", program: "대구대학교 창파도서관 실무실습", org: "대구대학교 창파도서관", start: "2025-05-12", end: "2025-05-30" },
+    { title: "창의융합프라자에서 이용자 응대", program: "대구대학교 창파도서관 실무실습", org: "대구대학교 창파도서관", start: "2025-05-12", end: "2025-05-30" },
+    { title: "북큐레이션 기획", program: "대구대학교 창파도서관 실무실습", org: "대구대학교 창파도서관", start: "2025-05-12", end: "2025-05-30" },
+    { title: "국립중앙도서관과 국립어린이청소년도서관 견학", program: "국립중앙도서관 실무실습", org: "국립중앙도서관", start: "2025-07-21", end: "2025-08-08" },
+    { title: "도서관 발전을 위한 도서관 랜드마크화 방안 조사 및 발표", program: "국립중앙도서관 실무실습", org: "국립중앙도서관", start: "2025-07-21", end: "2025-08-08" },
     { title: "북큐레이션 기획 및 전시", course: "북큐레이션", term: "3학년 1학기", start: "2025-04", end: "2025-12",
       phases: [{ label: "기획", start: "2025-04", end: "2025-06" }, { label: "전시", start: "2025-10", end: "2025-12" }] },
     { title: "길 위의 인문학 프로그램 기획(안) 작성", course: "도서관프로그램운영", term: "3학년 2학기", start: "2025-09", end: "2025-12" },
@@ -627,12 +631,13 @@ if (copyBtn) copyBtn.addEventListener("click", () => {
   const nCourse = CPs.filter((c) => kindOf(c) === "course").length, nIntern = CPs.length - nCourse;
   const awards = EXs.filter((e) => e.type === "award");
   const days = (a, b) => Math.round((new Date(b) - new Date(a)) / 864e5) + 1;
-  const interns = CPs.filter((c) => kindOf(c) === "intern");
+  // 같은 실무실습(program)에서 나온 항목은 기간·기관 계산과 타임라인에서 하나로 묶음
+  const interns = CPs.filter((c, i) => kindOf(c) === "intern" && (!c.program || CPs.findIndex((x) => x.program === c.program) === i));
   const internDays = interns.reduce((t, c) => t + days(c.start, c.end), 0);
   const certs = CTs.filter((c) => c.status === "취득");
   const recent = CPs.reduce((a, c) => (!a || ym(c.end) > ym(a.end) ? c : a), null);
   // 타임라인: 프로젝트 + 수상
-  const items = CPs.map((c) => ({ k: kindOf(c), title: c.title, start: c.start, end: c.end }))
+  const items = CPs.filter((c) => kindOf(c) === "course").concat(interns).map((c) => ({ k: kindOf(c), title: c.program || c.title, start: c.start, end: c.end }))
     .concat(awards.map((e) => ({ k: "award", title: e.title, start: e.start, end: e.end })));
   if (!items.length) return;
   const first = Math.min(...items.map((i) => ym(i.start))), last = Math.max(...items.map((i) => ym(i.end)));
@@ -836,11 +841,12 @@ $("cpCount").textContent = `${CP.length}건 · 항목을 펼치면 세부 내용
 $("cpList").innerHTML = CP.slice().sort((a, b) => ym(b.end) - ym(a.end)).map((c) => `
   <details class="item">
     <summary>
-      <span class="it-name">${esc(c.title)}<span class="it-sub">${c.course ? `&lt;${esc(c.course)}&gt; 강의 · ${esc(c.term)}` : esc(c.org || "")}</span></span>
+      <span class="it-name">${esc(c.title)}<span class="it-sub">${c.course ? `&lt;${esc(c.course)}&gt; 강의 · ${esc(c.term)}` : esc(c.program || c.org || "")}</span></span>
       <span class="it-date">${range(c.start, c.end)}</span><span class="chev" aria-hidden="true">›</span>
     </summary>
     <dl class="verify">
       ${c.course ? `<dt>강의</dt><dd>&lt;${esc(c.course)}&gt;</dd><dt>학기</dt><dd>${esc(c.term)}</dd>` : ""}
+      ${c.program ? `<dt>실무실습</dt><dd>${esc(c.program)}</dd>` : ""}
       ${c.org ? `<dt>기관</dt><dd>${esc(c.org)}</dd>` : ""}
       ${c.phases ? c.phases.map((ph) => `<dt>${esc(ph.label)}</dt><dd>${range(ph.start, ph.end)}</dd>`).join("") : `<dt>기간</dt><dd>${range(c.start, c.end)}</dd>`}
       ${c.activities ? `<dt>주요 활동</dt><dd><ul class="acts">${c.activities.map((a) => `<li>${esc(a)}</li>`).join("")}</ul></dd>` : ""}
@@ -913,6 +919,35 @@ document.addEventListener("click", (e) => {
   if (!b) return;
   const done = () => { b.textContent = "복사됨"; setTimeout(() => (b.textContent = "복사"), 1500); };
   try { navigator.clipboard.writeText(b.dataset.copy).then(done, () => (b.textContent = "직접 선택해 복사")); } catch (err) { b.textContent = "직접 선택해 복사"; }
+});
+
+/* 프로젝트 · 자격 · 경험 항목: 누르면 0.3초 동안 펼쳐지고 접힘 (경험 목록은 다시 그려지므로 위임) */
+const EXPAND_MS = 300;
+document.addEventListener("click", (e) => {
+  const summary = e.target.closest("details.item > summary");
+  if (!summary) return;
+  const d = summary.parentElement;
+  if (matchMedia("(prefers-reduced-motion: reduce)").matches) return;   // 기본 동작으로 즉시 토글
+  e.preventDefault();
+  const from = d.offsetHeight;
+  if (d._anim) d._anim.cancel();
+  const closing = d.open && !d.classList.contains("is-closing");
+  let to;
+  if (closing) {
+    d.classList.add("is-closing");
+    to = summary.offsetHeight + 1;           // border-bottom 1px 포함
+  } else {
+    d.classList.remove("is-closing");
+    d.open = true;
+    to = d.offsetHeight;
+  }
+  d.style.overflow = "hidden";
+  d._anim = d.animate({ height: [from + "px", to + "px"] }, { duration: EXPAND_MS, easing: "ease" });
+  d._anim.onfinish = () => {
+    if (closing) { d.open = false; d.classList.remove("is-closing"); }
+    d.style.height = d.style.overflow = "";
+    d._anim = null;
+  };
 });
 
 /* projects가 비어 있으면 대표·역량별 프로젝트 섹션과 메뉴를 숨김 */
